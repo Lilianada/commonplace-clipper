@@ -1,0 +1,31 @@
+{
+	"manifest_version": 2,
+	"name": "commonplace clipper",
+	"version": "1.0",
+	"description": "A browser extension which saves selected text on a web page to a markdown file with metadata.",
+	"icons": {
+		"48": "icons/splash.svg",
+		"96": "icons/splash.svg"
+	},
+	"page_action": {
+		"default_icon": "icons/splash.svg",
+		"default_title": "Clip to Commonplace Book",
+		"default_popup": "popup/clipper.html",
+		"browser_style": true,
+		"show_matches": ["<all_urls>"]
+	},
+	"permissions": [
+		"downloads",
+		"downloads.open",
+		"clipboardWrite",
+		"clipboardRead",
+		"activeTab"
+	],
+	"commands": {
+		"_execute_page_action": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+C"
+			}
+		}
+	}
+}

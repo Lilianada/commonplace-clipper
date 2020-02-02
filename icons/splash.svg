@@ -1,0 +1,31 @@
+<svg
+	xmlns="http://www.w3.org/2000/svg"
+	viewBox="0 0 800 800"
+	preserveAspectRatio="none"
+>
+	<defs>
+		<clipPath id="a">
+			<path d="M0 0h800v800H0z" />
+		</clipPath>
+		<filter
+			id="b"
+			width="606.7"
+			height="1097"
+			x="318"
+			y="-149"
+			filterUnits="userSpaceOnUse"
+		>
+			<feOffset dx="-24" />
+			<feGaussianBlur result="b" stdDeviation="49.5" />
+			<feFlood flood-opacity=".1" />
+			<feComposite in2="b" operator="in" />
+			<feComposite in="SourceGraphic" />
+		</filter>
+	</defs>
+	<g clip-path="url(#a)">
+		<path fill="#b0330e" d="M0 800L157 0h643v800z" />
+		<g filter="url(#b)">
+			<path fill="#df7328" d="M603 800C559 640 513 389 490 0h310v800z" />
+		</g>
+	</g>
+</svg>
