@@ -2,3 +2,4 @@ node_modules
 .DS_Store
 
 addon/popup/index.js
+addon/content_scripts/index.js
