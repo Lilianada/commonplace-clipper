@@ -1,15 +1,28 @@
+import rangy from 'rangy';
+import toMarkdown from './toMarkdown';
+
 (function() {
 	/**
 	 * Check and set a global guard variable.
 	 * If this content script is injected into the same page again,
 	 * it will do nothing next time.
 	 */
-	if (window.hasRun) {
-		return;
-	}
-	window.hasRun = true;
+	// if (window.hasRun) {
+	// 	return;
+	// }
+	// window.hasRun = true;
 
-	console.log('Script injected successfully.');
+	try {
+		let selection = rangy.getSelection().toHtml();
+		let md;
+		if (selection) {
+			md = toMarkdown(selection);
+		}
+		console.log(selection);
+		console.log(md);
+	} catch (e) {
+		console.log(e);
+	}
 
 	/**
 	 * Given a URL to a beast image, remove all existing beasts, then
