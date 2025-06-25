@@ -5,7 +5,7 @@ const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const GITHUB_API_URL = 'https://api.github.com';
 const GITHUB_REPO_OWNER = 'Lilianada';
 const GITHUB_REPO_NAME = 'Lilyslab';
-const REDIRECT_URL = 'https://lilianada.github.io/oauth-callback'; // Use your GitHub pages or another URL you control
+const REDIRECT_URL = chrome.identity.getRedirectURL(); // Automatically gets the correct URL for your extension
 
 // Initialize
 chrome.runtime.onInstalled.addListener(() => {
@@ -27,8 +27,26 @@ async function initiateGitHubAuth() {
   // Create the GitHub authorization URL
   const authUrl = `${GITHUB_AUTH_URL}?client_id=${GITHUB_CLIENT_ID}&state=${authState}&scope=repo&redirect_uri=${encodeURIComponent(REDIRECT_URL)}`;
   
-  // Open the authorization page in a new tab
-  chrome.tabs.create({ url: authUrl });
+  try {
+    // Use chrome.identity to initiate the authentication flow
+    // This handles opening and closing the authorization page automatically
+    const responseUrl = await chrome.identity.launchWebAuthFlow({
+      url: authUrl,
+      interactive: true
+    });
+    
+    // Extract the code and state from the response URL
+    const url = new URL(responseUrl);
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+    
+    // Process the authorization code
+    if (code && state) {
+      return handleOAuthCallback(code, state);
+    }
+  } catch (error) {
+    console.error('OAuth flow error:', error);
+  }
 }
 
 // Function to handle OAuth callback and exchange code for token
@@ -107,24 +125,10 @@ async function handleOAuthCallback(code, state) {
   }
 }
 
-// Listen for tabs being updated to catch the redirect
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // Check if this is our redirect URL
-  if (changeInfo.url && changeInfo.url.startsWith(REDIRECT_URL)) {
-    const url = new URL(changeInfo.url);
-    const code = url.searchParams.get('code');
-    const state = url.searchParams.get('state');
-    
-    if (code && state) {
-      handleOAuthCallback(code, state).then(success => {
-        if (success) {
-          // Close the auth tab
-          chrome.tabs.remove(tabId);
-        }
-      });
-    }
-  }
-});
+// We no longer need the tab listener as chrome.identity.launchWebAuthFlow
+// handles the tab creation and closing automatically
+
+// Update the manifest.json to include the identity permission and use the correct URL
 
 // GitHub API: Create or update a file in the repository
 async function saveClipToGitHub(clip) {

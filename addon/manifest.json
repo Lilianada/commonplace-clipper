@@ -21,7 +21,8 @@
 		"clipboardRead",
 		"activeTab",
 		"storage",
-		"scripting"
+		"scripting",
+		"identity"
 	],
 	"host_permissions": [
 		"https://github.com/*",
