@@ -74,8 +74,8 @@ async function handleOAuthCallback(code, state) {
     // Set a hardcoded client secret for development to avoid the prompt
     // IMPORTANT: In a production environment, this should be handled securely
     if (!secret) {
-      // Use a default client secret (you should replace this with your actual client secret)
-      secret = "github_oauth_client_secret_here"; 
+      // Using the provided GitHub OAuth client secret
+      secret = "eb4639586c0f8ddb37ce451128b6200721fc1014";
       await chrome.storage.local.set({ clientSecret: secret });
       
       // Log for debugging
