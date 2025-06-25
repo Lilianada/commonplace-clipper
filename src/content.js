@@ -1,62 +1,58 @@
 import rangy from 'rangy';
 import toMarkdown from './toMarkdown';
 
+// Use a self-executing function to avoid polluting the global namespace
 (function() {
-	/**
-	 * Check and set a global guard variable.
-	 * If this content script is injected into the same page again,
-	 * it will do nothing next time.
-	 */
-	// if (window.hasRun) {
-	// 	return;
-	// }
-	// window.hasRun = true;
+	// Set a guard to avoid running multiple times
+	if (window.webClipperHasRun) {
+		return;
+	}
+	window.webClipperHasRun = true;
 
+	// Initialize rangy on page load
+	rangy.init();
+
+	// For development, get the current selection when the script loads
 	try {
-		let selection = rangy.getSelection().toHtml();
-		let md;
-		if (selection) {
-			md = toMarkdown(selection);
+		const selection = rangy.getSelection();
+		if (selection && selection.rangeCount > 0) {
+			const html = selection.toHtml();
+			const md = toMarkdown(html);
+			console.debug('Web Clipper - Current selection:', { html, markdown: md });
 		}
-		console.log(selection);
-		console.log(md);
 	} catch (e) {
-		console.log(e);
+		console.error('Web Clipper - Error processing selection:', e);
 	}
 
-	/**
-	 * Given a URL to a beast image, remove all existing beasts, then
-	 * create and style an IMG node pointing to
-	 * that image, then insert the node into the document.
-	 */
-	// function insertBeast(beastURL) {
-	// 	removeExistingBeasts();
-	// 	let beastImage = document.createElement('img');
-	// 	beastImage.setAttribute('src', beastURL);
-	// 	beastImage.style.height = '100vh';
-	// 	beastImage.className = 'beastify-image';
-	// 	document.body.appendChild(beastImage);
-	// }
-
-	/**
-	 * Remove every beast from the page.
-	 */
-	// function removeExistingBeasts() {
-	// 	let existingBeasts = document.querySelectorAll('.beastify-image');
-	// 	for (let beast of existingBeasts) {
-	// 		beast.remove();
-	// 	}
-	// }
-
-	/**
-	 * Listen for messages from the background script.
-	 * Call "beastify()" or "reset()".
-	 */
-	// browser.runtime.onMessage.addListener(message => {
-	// 	if (message.command === 'beastify') {
-	// 		insertBeast(message.beastURL);
-	// 	} else if (message.command === 'reset') {
-	// 		removeExistingBeasts();
-	// 	}
-	// });
+	// Listen for messages from the popup
+	window.addEventListener('message', async (event) => {
+		if (event.source !== window || !event.data) return;
+		
+		// Handle selection clip request
+		if (event.data.type === 'GET_SELECTION_CLIP') {
+			try {
+				let html = '';
+				let md = '';
+				const selection = rangy.getSelection();
+				if (selection && selection.rangeCount > 0) {
+					html = selection.toHtml();
+					md = toMarkdown(html);
+				}
+				// Return the results
+				window.postMessage({
+					type: 'SELECTION_CLIP_RESULT',
+					html,
+					markdown: md
+				}, '*');
+			} catch (e) {
+				console.error('Web Clipper - Error processing selection:', e);
+				window.postMessage({
+					type: 'SELECTION_CLIP_RESULT',
+					html: '',
+					markdown: '',
+					error: e.message
+				}, '*');
+			}
+		}
+	});
 })();

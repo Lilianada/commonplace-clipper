@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Clipper OAuth Callback</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .card {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            margin-top: 0;
+            color: #333;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+        }
+        .secret-form {
+            display: none;
+            margin-top: 20px;
+        }
+        .secret-form input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .secret-form button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .success-message {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div id="success-message" class="success-message">
+            <h1>Authentication Successful!</h1>
+            <p>You have successfully authenticated with GitHub.</p>
+            <p>You can close this tab and return to the Web Clipper extension.</p>
+        </div>
+        
+        <div id="secret-form" class="secret-form">
+            <h1>Almost there!</h1>
+            <p>Please enter your GitHub client secret to complete authentication:</p>
+            <input type="password" id="client-secret" placeholder="GitHub Client Secret">
+            <button id="submit-secret">Submit</button>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const promptSecret = urlParams.get('promptSecret');
+        
+        // For GitHub OAuth callback
+        if (code && state) {
+            document.getElementById('success-message').style.display = 'block';
+            
+            // Attempt to communicate with the extension
+            try {
+                chrome.runtime.sendMessage({
+                    type: 'GITHUB_OAUTH_CALLBACK',
+                    code,
+                    state
+                });
+            } catch (error) {
+                console.error('Failed to communicate with extension:', error);
+            }
+        }
+        
+        // For client secret prompt
+        if (promptSecret === 'true') {
+            document.getElementById('secret-form').style.display = 'block';
+            document.getElementById('submit-secret').addEventListener('click', () => {
+                const secret = document.getElementById('client-secret').value.trim();
+                if (secret) {
+                    try {
+                        chrome.runtime.sendMessage({
+                            type: 'GITHUB_CLIENT_SECRET',
+                            secret
+                        });
+                    } catch (error) {
+                        console.error('Failed to send client secret to extension:', error);
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

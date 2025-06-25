@@ -1,31 +1,39 @@
 {
-	"manifest_version": 2,
-	"name": "commonplace clipper",
-	"version": "1.0",
-	"description": "A browser extension which saves selected text on a web page to a markdown file with metadata.",
+	"manifest_version": 3,
+	"name": "Web Clipper",
+	"version": "1.1",
+	"description": "A browser extension which saves selected text on a web page to a markdown file with metadata and uploads to GitHub.",
 	"icons": {
 		"48": "icons/splash.svg",
-		"96": "icons/splash.svg"
+		"96": "icons/splash.svg",
+		"128": "icons/splash.svg"
 	},
-	"page_action": {
+	"action": {
 		"default_icon": "icons/splash.svg",
 		"default_title": "Clip to Commonplace Book",
-		"default_popup": "popup/index.html",
-		"browser_style": true,
-		"show_matches": ["<all_urls>"]
+		"default_popup": "popup/index.html"
+	},
+	"background": {
+		"service_worker": "background/index.js"
 	},
 	"permissions": [
-		"downloads",
-		"downloads.open",
 		"clipboardWrite",
 		"clipboardRead",
-		"activeTab"
+		"activeTab",
+		"storage",
+		"scripting"
+	],
+	"host_permissions": [
+		"https://github.com/*",
+		"https://api.github.com/*",
+		"https://cors-anywhere.herokuapp.com/*"
 	],
 	"commands": {
-		"_execute_page_action": {
+		"_execute_action": {
 			"suggested_key": {
 				"default": "Ctrl+Shift+C"
-			}
+			},
+			"description": "Open the Web Clipper popup"
 		}
 	}
 }

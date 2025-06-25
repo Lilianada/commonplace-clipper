@@ -1,13 +1,110 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
-		<title>Hello, world!</title>
-	</head>
-	<body style="padding: 1rem;">
-		<input type="text" autofocus placeholder="Title" />
-		<script src="index.js"></script>
-	</body>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+        <title>Web Clipper</title>
+        <style>
+            body {
+                min-width: 320px;
+                font-family: system-ui, -apple-system, sans-serif;
+            }
+            .form-group {
+                margin-bottom: 10px;
+            }
+            label {
+                display: block;
+                margin-bottom: 3px;
+                font-weight: 500;
+            }
+            input, textarea, select {
+                width: 100%;
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            button {
+                padding: 8px 12px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-right: 5px;
+            }
+            button:hover {
+                background-color: #45a049;
+            }
+            button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+            }
+            .github-status {
+                margin-bottom: 10px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .github-status.authenticated {
+                color: #4CAF50;
+            }
+            .github-status.not-authenticated {
+                color: #f44336;
+            }
+            .actions {
+                margin-top: 15px;
+                display: flex;
+                justify-content: space-between;
+            }
+            .loading {
+                display: none;
+                margin-top: 10px;
+                text-align: center;
+                color: #666;
+            }
+        </style>
+    </head>
+    <body style="padding: 1rem;">
+        <div class="github-status" id="github-status">
+            <span id="github-status-text">Checking GitHub connection...</span>
+            <button id="github-connect" style="display: none;">Connect to GitHub</button>
+        </div>
+
+        <div class="form-group">
+            <label for="clip-title">Title:</label>
+            <input id="clip-title" type="text" autofocus placeholder="Title" />
+        </div>
+        <div class="form-group">
+            <label for="clip-type">Type:</label>
+            <select id="clip-type">
+                <option value="article">Article</option>
+                <option value="quote">Quote</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="clip-tags">Tags:</label>
+            <input id="clip-tags" type="text" placeholder="Comma-separated tags" />
+        </div>
+        <div class="form-group">
+            <label>Website:</label>
+            <span id="clip-site"></span>
+        </div>
+        <div class="form-group">
+            <label>URL:</label>
+            <span id="clip-url"></span>
+        </div>
+        <div class="form-group">
+            <label for="clip-selection">Selection:</label>
+            <textarea id="clip-selection" rows="5"></textarea>
+        </div>
+        <div class="loading" id="loading">
+            Saving...
+        </div>
+        <div class="actions">
+            <button id="clip-save" disabled>Save</button>
+            <button id="clip-copy">Copy Markdown</button>
+        </div>
+        <script src="index.js"></script>
+    </body>
 </html>
