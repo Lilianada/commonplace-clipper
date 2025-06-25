@@ -13,7 +13,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             return new Promise((resolve) => {
                 chrome.runtime.sendMessage({ type: 'CHECK_GITHUB_AUTH' }, (response) => {
-                    isAuthenticated = response.authenticated;
+                    console.log('Auth check response:', response);
+                    
+                    // Handle chrome runtime errors
+                    if (chrome.runtime.lastError) {
+                        console.error('Runtime error:', chrome.runtime.lastError);
+                        githubStatusText.textContent = 'Error: ' + chrome.runtime.lastError.message;
+                        githubStatusText.parentElement.classList.add('not-authenticated');
+                        githubStatusText.parentElement.classList.remove('authenticated');
+                        githubConnectBtn.style.display = 'inline-block';
+                        saveBtn.disabled = true;
+                        return resolve();
+                    }
+                    
+                    isAuthenticated = response && response.authenticated;
                     
                     if (isAuthenticated) {
                         githubStatusText.textContent = 'Connected to GitHub';
@@ -42,9 +55,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     githubConnectBtn.addEventListener('click', () => {
         githubStatusText.textContent = 'Connecting to GitHub...';
         chrome.runtime.sendMessage({ type: 'INITIATE_GITHUB_AUTH' }, (response) => {
+            // Handle chrome runtime errors
+            if (chrome.runtime.lastError) {
+                console.error('Runtime error:', chrome.runtime.lastError);
+                githubStatusText.textContent = 'Error: ' + chrome.runtime.lastError.message;
+                return;
+            }
+            
             if (!response || response.error) {
                 console.error('Error initiating GitHub auth:', response?.error);
-                githubStatusText.textContent = 'GitHub connection error';
+                githubStatusText.textContent = response?.error || 'GitHub connection error';
             }
         });
     });
@@ -99,6 +119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             markdown = injectionResults[0].result.markdown || '';
         }
     } catch (e) {
+        console.error('Error getting selection:', e);
         // fallback: plain text selection
         const selectionResults = await new Promise((resolve) => {
             chrome.scripting.executeScript({
@@ -160,12 +181,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
     
-    // Copy Markdown button
+    // Copy Markdown button - simplified approach
     document.getElementById('clip-copy').onclick = () => {
-        const selection = document.getElementById('clip-selection');
-        selection.select();
-        document.execCommand('copy');
-        alert('Markdown copied to clipboard!');
+        try {
+            const textarea = document.getElementById('clip-selection');
+            const selectionText = textarea.value;
+            
+            // Select the text first (important for the fallback)
+            textarea.select();
+            textarea.setSelectionRange(0, 99999); // For mobile devices
+            
+            // Try the modern clipboard API first
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(selectionText)
+                    .then(() => {
+                        console.log('Clipboard API success');
+                        textarea.blur(); // Remove focus/selection
+                        alert('Markdown copied to clipboard!');
+                    })
+                    .catch(err => {
+                        console.error('Clipboard API failed:', err);
+                        // Let the fallback below handle it
+                        document.execCommand('copy');
+                        alert('Markdown copied to clipboard!');
+                    });
+            } else {
+                // Fallback for older browsers or non-secure contexts
+                const result = document.execCommand('copy');
+                console.log('execCommand result:', result);
+                if (result) {
+                    alert('Markdown copied to clipboard!');
+                } else {
+                    alert('Unable to copy to clipboard');
+                }
+            }
+        } catch (err) {
+            console.error('Copy failed:', err);
+            alert('Unable to copy to clipboard: ' + err.message);
+        }
     };
     
     // Check GitHub auth status on load

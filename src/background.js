@@ -5,11 +5,12 @@ const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
 const GITHUB_API_URL = 'https://api.github.com';
 const GITHUB_REPO_OWNER = 'Lilianada';
 const GITHUB_REPO_NAME = 'Lilyslab';
-const REDIRECT_URL = chrome.identity.getRedirectURL(); // Automatically gets the correct URL for your extension
+const REDIRECT_URL = chrome.identity.getRedirectURL('oauth2'); // Explicitly specify the oauth2 scheme
 
 // Initialize
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Web Clipper extension installed');
+  console.log('Redirect URL for OAuth:', REDIRECT_URL);
   // Check if we already have a token
   chrome.storage.local.get(['githubToken'], (result) => {
     console.log('Stored token:', result.githubToken ? 'Yes' : 'No');
@@ -18,22 +19,27 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Function to initiate GitHub OAuth flow
 async function initiateGitHubAuth() {
-  // Generate a random state value for security
-  const authState = Math.random().toString(36).substring(2, 15);
-  
-  // Store the state
-  await chrome.storage.local.set({ authState });
-  
-  // Create the GitHub authorization URL
-  const authUrl = `${GITHUB_AUTH_URL}?client_id=${GITHUB_CLIENT_ID}&state=${authState}&scope=repo&redirect_uri=${encodeURIComponent(REDIRECT_URL)}`;
-  
   try {
+    console.log('Initiating GitHub auth...');
+    
+    // Generate a random state value for security
+    const authState = Math.random().toString(36).substring(2, 15);
+    
+    // Store the state
+    await chrome.storage.local.set({ authState });
+    
+    // Create the GitHub authorization URL
+    const authUrl = `${GITHUB_AUTH_URL}?client_id=${GITHUB_CLIENT_ID}&state=${authState}&scope=repo&redirect_uri=${encodeURIComponent(REDIRECT_URL)}`;
+    console.log('Auth URL:', authUrl);
+    
     // Use chrome.identity to initiate the authentication flow
     // This handles opening and closing the authorization page automatically
     const responseUrl = await chrome.identity.launchWebAuthFlow({
       url: authUrl,
       interactive: true
     });
+    
+    console.log('Got response URL:', responseUrl);
     
     // Extract the code and state from the response URL
     const url = new URL(responseUrl);
@@ -42,6 +48,7 @@ async function initiateGitHubAuth() {
     
     // Process the authorization code
     if (code && state) {
+      console.log('Got code and state, handling callback...');
       return handleOAuthCallback(code, state);
     }
   } catch (error) {
@@ -64,40 +71,27 @@ async function handleOAuthCallback(code, state) {
     const { clientSecret } = await chrome.storage.local.get(['clientSecret']);
     let secret = clientSecret;
     
-    // If no stored client secret, prompt for it (development only)
+    // Set a hardcoded client secret for development to avoid the prompt
+    // IMPORTANT: In a production environment, this should be handled securely
     if (!secret) {
-      // In Manifest V3, we can't use window.prompt directly in service workers
-      // Let's create a tab to get the client secret
-      await new Promise(resolve => {
-        chrome.tabs.create({ 
-          url: chrome.runtime.getURL('oauth-callback.html') + '?promptSecret=true' 
-        }, async (tab) => {
-          const listener = async (message, sender) => {
-            if (message.type === 'GITHUB_CLIENT_SECRET' && sender.tab.id === tab.id) {
-              secret = message.secret;
-              if (secret) {
-                await chrome.storage.local.set({ clientSecret: secret });
-              }
-              chrome.tabs.remove(tab.id);
-              chrome.runtime.onMessage.removeListener(listener);
-              resolve();
-            }
-          };
-          chrome.runtime.onMessage.addListener(listener);
-        });
-      });
+      // Use a default client secret (you should replace this with your actual client secret)
+      secret = "github_oauth_client_secret_here"; 
+      await chrome.storage.local.set({ clientSecret: secret });
       
-      if (!secret) {
-        throw new Error("Client secret is required for GitHub authentication");
-      }
+      // Log for debugging
+      console.log('Using default client secret');
     }
     
-    // Use a CORS proxy for development (not secure for production)
-    const tokenResponse = await fetch(`https://cors-anywhere.herokuapp.com/${GITHUB_TOKEN_URL}`, {
+    // Create a form for the token request
+    // Use a proxy to bypass CORS (for development purposes only)
+    // In production, this should be handled by your backend server
+    const tokenExchangeUrl = `https://cors-anywhere.herokuapp.com/https://github.com/login/oauth/access_token`;
+    const tokenResponse = await fetch(tokenExchangeUrl, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Origin': chrome.runtime.getURL('')
       },
       body: JSON.stringify({
         client_id: GITHUB_CLIENT_ID,
@@ -108,6 +102,8 @@ async function handleOAuthCallback(code, state) {
     });
     
     const tokenData = await tokenResponse.json();
+    console.log('Token response received:', tokenData.access_token ? 'Token received' : 'No token');
+    
     if (tokenData.access_token) {
       // Store the token in extension storage
       await chrome.storage.local.set({ githubToken: tokenData.access_token });
@@ -116,6 +112,9 @@ async function handleOAuthCallback(code, state) {
       // Notify any open popups
       chrome.runtime.sendMessage({ type: 'GITHUB_AUTH_SUCCESS' });
       return true;
+    } else if (tokenData.error) {
+      console.error('GitHub auth error:', tokenData.error);
+      throw new Error(`GitHub auth error: ${tokenData.error_description || tokenData.error}`);
     } else {
       throw new Error("No access token in response");
     }
@@ -124,11 +123,6 @@ async function handleOAuthCallback(code, state) {
     return false;
   }
 }
-
-// We no longer need the tab listener as chrome.identity.launchWebAuthFlow
-// handles the tab creation and closing automatically
-
-// Update the manifest.json to include the identity permission and use the correct URL
 
 // GitHub API: Create or update a file in the repository
 async function saveClipToGitHub(clip) {
@@ -187,11 +181,18 @@ ${clip.markdown}
 
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log('Received message:', message.type);
+  
   if (message.type === 'INITIATE_GITHUB_AUTH') {
-    initiateGitHubAuth().catch(error => {
-      console.error('Auth initiation error:', error);
-      sendResponse({ success: false, error: error.message });
-    });
+    initiateGitHubAuth()
+      .then(result => {
+        console.log('Auth result:', result);
+        sendResponse({ success: !!result });
+      })
+      .catch(error => {
+        console.error('Auth initiation error:', error);
+        sendResponse({ success: false, error: error.message });
+      });
     return true; // For async response
   }
   
@@ -208,8 +209,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.type === 'CHECK_GITHUB_AUTH') {
     chrome.storage.local.get(['githubToken'], result => {
-      sendResponse({ authenticated: !!result.githubToken });
+      const isAuthenticated = !!result.githubToken;
+      console.log('Auth check:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+      sendResponse({ authenticated: isAuthenticated });
     });
     return true; // For async response
+  }
+  
+  // For the OAuth callback from the oauth-callback.html page
+  if (message.type === 'GITHUB_OAUTH_CALLBACK' && message.code && message.state) {
+    console.log('Received OAuth callback from page');
+    handleOAuthCallback(message.code, message.state)
+      .then(success => {
+        sendResponse({ success });
+      })
+      .catch(error => {
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
   }
 });
