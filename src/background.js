@@ -83,22 +83,14 @@ async function handleOAuthCallback(code, state) {
     }
     
     // Create a form for the token request
-    // Use a proxy to bypass CORS (for development purposes only)
-    // In production, this should be handled by your backend server
-    const tokenExchangeUrl = `https://cors-anywhere.herokuapp.com/https://github.com/login/oauth/access_token`;
+    // Direct approach without using a CORS proxy
+    const tokenExchangeUrl = `${GITHUB_TOKEN_URL}?client_id=${GITHUB_CLIENT_ID}&client_secret=${secret}&code=${code}&redirect_uri=${encodeURIComponent(REDIRECT_URL)}`;
+    
     const tokenResponse = await fetch(tokenExchangeUrl, {
       method: 'POST',
       headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Origin': chrome.runtime.getURL('')
-      },
-      body: JSON.stringify({
-        client_id: GITHUB_CLIENT_ID,
-        client_secret: secret,
-        code: code,
-        redirect_uri: REDIRECT_URL
-      })
+        'Accept': 'application/json'
+      }
     });
     
     const tokenData = await tokenResponse.json();

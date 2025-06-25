@@ -27,7 +27,7 @@
 	"host_permissions": [
 		"https://github.com/*",
 		"https://api.github.com/*",
-		"https://cors-anywhere.herokuapp.com/*"
+		"https://*.chromiumapp.org/*"
 	],
 	"commands": {
 		"_execute_action": {
